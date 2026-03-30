@@ -1,281 +1,865 @@
-# Propuestas de Métricas de Transferencia para Clustering con Restricciones de Tamaño
-### Tesis: "Diseño de una Métrica de Transferencia para la Utilización de Conjuntos de Datos de Clasificación en Tareas de Clustering"
+
+# Propuesta de Métricas de Transferencia para usar Datasets Etiquetados de Clasificación en Clustering con Restricciones Generales de Tamaño
+
+## Tesis
+**“Diseño de una Métrica de Transferencia para la Utilización de Conjuntos de Datos de Clasificación en Tareas de Clustering”.**
 
 ---
 
-## Introducción
+## 1. Problema formal
 
-Se presentan tres propuestas metodológicas para diseñar una métrica de transferencia que determine qué tan apto es un dataset etiquetado (fuente) para ser utilizado en tareas de clustering con restricción de tamaño (size-constrained clustering). Cada propuesta integra, en distinto grado, los conceptos del estado del arte de **CLM** (Cluster-Label Matching, Jeon et al., 2025) y **JMDS** (Joint Model-Data Structure score).
+Sea un dataset etiquetado fuente
 
----
+\[
+\mathcal D_s=\{(x_i,y_i)\}_{i=1}^n,\qquad y_i\in\{1,\dots,K\}.
+\]
 
-## Propuesta 1 — Métrica de Transferibilidad Estructural ($T\text{-}CH_A$)
+Queremos estimar, **antes** de ejecutar clustering restringido, qué tan apto es este dataset para transferirse a una tarea de clustering con restricciones generales de tamaño. La salida deseada es una métrica
 
-### Concepto Central
+\[
+\mathcal T(\mathcal D_s,\Pi^\*)
+\in [0,1]
+\]
 
-Esta propuesta adapta el Índice de Calinski-Harabasz Ajustado ($CH_A$) del framework CLM para que no solo mida si las etiquetas coinciden con los clusters naturales, sino si esa estructura **sobrevive** a una restricción de tamaño impuesta externamente.
+tal que valores altos indiquen que:
 
-La idea clave es medir la **"pérdida de cohesión"** o **"pérdida de energía estructural"** que ocurre cuando se obliga al dataset a agruparse en clusters de tamaño específico (por ejemplo, clusters perfectamente balanceados). Si la estructura original del dataset ya es cercana a la estructura restringida, la pérdida será pequeña y el dataset será altamente transferible.
+1. las etiquetas del dataset capturan una estructura agrupable real;
+2. esa estructura es confiable tanto **globalmente** como **localmente**;
+3. dicha estructura es **compatible** con una región factible de tamaños \(\Pi^\*\), que puede tomar formas como:
+   - cotas por cluster:
+     \[
+     n_k\in [L_k,U_k],
+     \]
+   - proporciones objetivo no uniformes:
+     \[
+     \pi^\*=(\pi_1^\*,\dots,\pi_K^\*),\qquad \sum_k \pi_k^\*=1,
+     \]
+   - una región factible general:
+     \[
+     \Pi^\*\subset \Delta^{K-1}.
+     \]
 
-### Funcionamiento
-
-El cálculo se realiza en tres pasos:
-
-**Paso 1 — Calcular el $CH_A$ sin restricciones:**
-
-Se aplica el $CH_A$ estándar del framework CLM sobre el dataset fuente $D_s$ con $K$ clusters:
-
-$$CH_A^{\text{libre}}(D_s, K) = \sigma\!\left(\beta_0 + \beta_1 \cdot \log\!\left(\frac{B_K^{\text{libre}} / (K-1)}{W_K^{\text{libre}} / (n-K)}\right)\right) \in [0, 1]$$
-
-donde $B_K^{\text{libre}}$ y $W_K^{\text{libre}}$ son las varianzas inter e intra-cluster del agrupamiento libre (sin restricción).
-
-**Paso 2 — Calcular el $CH$ bajo restricción de tamaño:**
-
-Se ejecuta un algoritmo de clustering con restricción de tamaño (e.g., Balanced K-Means, Constrained K-Means) que fuerza $|C_k| \in [n_k^{\min}, n_k^{\max}]$, obteniendo la partición restringida $\hat{\mathcal{C}}^{\text{rest}}$. Con esta partición se calcula el índice Calinski-Harabasz crudo:
-
-$$CH^{\text{rest}}(D_s, K) = \frac{B_K^{\text{rest}} / (K-1)}{W_K^{\text{rest}} / (n-K)}$$
-
-**Paso 3 — Calcular la métrica de transferencia:**
-
-$$\boxed{T\text{-}CH_A(D_s, K) = \frac{CH^{\text{rest}}(D_s, K)}{CH^{\text{libre}}(D_s, K)}}$$
-
-Dado que $CH^{\text{rest}} \leq CH^{\text{libre}}$ siempre (agregar restricciones no puede mejorar la cohesión óptima), la métrica satisface $T\text{-}CH_A \in (0, 1]$.
-
-**Interpretación del valor:**
-- $T\text{-}CH_A \approx 1$: La estructura natural del dataset ya es compatible con las restricciones de tamaño. Alto potencial de transferencia.
-- $T\text{-}CH_A \approx 0$: Imponer la restricción de tamaño destruye casi toda la cohesión del clustering. Bajo potencial de transferencia.
-
-### Propiedades y Discusión
-
-| Propiedad | Valor |
-|---|---|
-| Rango | $(0, 1]$ |
-| Requiere ejecutar clustering restringido | Sí |
-| Parámetros libres | 0 (usa calibración previa de CLM) |
-| Interpretabilidad | Alta (razón de cohesión) |
-| Costo computacional | Medio (un paso de clustering restringido) |
-
-**Fortaleza principal:** Directamente interpretable como la fracción de cohesión que se preserva bajo la restricción. No requiere supuestos paramétricos adicionales.
-
-**Limitación principal:** Depende de la calidad del algoritmo de clustering restringido usado en el Paso 2 — diferentes algoritmos pueden producir distintos $CH^{\text{rest}}$. Se recomienda fijar un algoritmo estándar (e.g., Balanced K-Means con semilla aleatoria fija) para garantizar reproducibilidad.
-
-**Relación con CLM:** Los axiomas A1–A4 se heredan parcialmente a través de $CH_A^{\text{libre}}$. Sin embargo, $CH^{\text{rest}}$ en el numerador no pasa por el ajuste logístico de CLM, por lo que la ratio puede no satisfacer A4 (invariancia de rango) de forma estricta. Una variante axiomáticamente más rigurosa es aplicar el ajuste logístico también a $CH^{\text{rest}}$.
+Aquí \(\Delta^{K-1}\) es el simplex de probabilidad.
 
 ---
 
-## Propuesta 2 — Score de Confianza Transferida ($JMDS\text{-}T$)
+## 2. Idea central: una métrica de transferencia debe unir tres niveles
 
-### Concepto Central
+La propuesta no debe tratar CLM y JMDS como bloques pegados artificialmente. La forma correcta de integrarlos es pensar que la transferibilidad tiene tres niveles acoplados:
 
-Utilizando la arquitectura del JMDS (Joint Model-Data Structure score), se diseña una métrica que evalúa la confianza de que una etiqueta de clasificación sea un "buen cluster" bajo restricciones de tamaño. En este contexto:
+### Nivel 1: estructura global
+Las etiquetas solo son útiles para clustering si inducen particiones compactas y separadas de forma estable **a través de datasets**, no solo dentro de un dataset particular.
 
-- El **"Modelo"** es el dataset de clasificación original: las etiquetas $y_i$ actúan como pseudo-modelo de referencia.
-- La **"Estructura"** es el resultado del clustering restringido: la partición $\hat{\mathcal{C}}^{\text{rest}}$.
+### Nivel 2: confiabilidad local
+No todas las muestras sostienen con la misma fuerza esa estructura. Algunas están en núcleos de su clase; otras en regiones ambiguas, bordes o solapamientos. La métrica debe ponderar el soporte estructural muestra a muestra.
 
-La métrica evalúa, por cada muestra, si su etiqueta original coincide con su asignación en el clustering restringido, ponderando por la certeza de dicha asignación.
+### Nivel 3: compatibilidad con restricciones de tamaño
+Incluso si las etiquetas reflejan bien la estructura, esa estructura puede ser mala candidata para clustering restringido si sus masas naturales son incompatibles con la región factible de tamaños objetivo.
 
-### Componentes del $JMDS\text{-}T$
+De aquí se desprende una familia de métricas de transferencia:
 
-#### Componente 1 — $LPG^{\text{rest}}$: Log-Probability Gap Restringido
+\[
+\mathcal T = \mathrm{Fuse}\big(\text{estructura global ajustada},\ \text{confiabilidad local integrada},\ \text{compatibilidad de tamaño}\big).
+\]
 
-En el JMDS original, el $LPG$ usa un GMM estándar para medir la separación entre la componente primaria y secundaria de cada muestra. En $JMDS\text{-}T$, se modifica para incorporar el costo de la restricción de tamaño.
+La palabra clave es **integrada**: la confiabilidad local no se añade al final, sino que modifica desde el inicio la forma en que medimos estructura y masas naturales.
 
-Se ajusta un GMM con $K$ componentes con penalización de tamaño. Esto puede implementarse de dos formas:
+---
 
-**Opción A (Hard):** Usar directamente las probabilidades de pertenencia del algoritmo de clustering restringido $\hat{r}_{ik} = p(z_i = k \mid x_i, \hat{\mathcal{C}}^{\text{rest}})$.
+## 3. Qué tomamos de CLM y de JMDS
 
-**Opción B (Soft):** Ajustar un GMM estándar y penalizar el log-likelihood de cada componente por el costo de violar la restricción:
+## 3.1. De CLM
 
-$$\tilde{p}(x_i \mid \text{comp}_k) = p(x_i \mid \text{comp}_k) \cdot \exp\!\left(-\mu \cdot \text{cost}(k, \mathcal{C}^{\text{rest}})\right)$$
+Del marco CLM se debe conservar el espíritu axiomático, no solo un índice puntual. Los cuatro principios base son:
 
-donde $\text{cost}(k, \mathcal{C}^{\text{rest}}) = \max\!\left(0,\, \frac{|C_k|}{n} - u_k\right) + \max\!\left(0,\, l_k - \frac{|C_k|}{n}\right)$ es la violación de la restricción del cluster $k$, y $\mu > 0$ controla la fuerza de la penalización.
+- invariancia a cardinalidad del dataset;
+- invariancia a desplazamiento de distancias;
+- invariancia al número de clases;
+- invariancia de rango.
 
-El $LPG^{\text{rest}}$ de cada muestra es:
+Esto es esencial porque una métrica de transferencia no debe subir o bajar artificialmente por tener más muestras, más dimensiones o más clases, sino por la calidad estructural del dataset.
 
-$$LPG^{\text{rest}}(x_i) = \log \tilde{p}(x_i \mid \text{comp}_{z^*_i}) - \log \tilde{p}(x_i \mid \text{comp}_{z^{**}_i})$$
+## 3.2. De JMDS
 
-Un $LPG^{\text{rest}}(x_i)$ alto indica que $x_i$ pertenece con alta certeza al cluster restringido $z^*_i$, incluso considerando el costo de la restricción.
+La idea valiosa de JMDS no es únicamente la fórmula \( \mathrm{LPG}\cdot \mathrm{MPPL} \), sino que la confianza debe construirse combinando:
 
-#### Componente 2 — $MPPL^{\text{rest}}$: Probabilidad del Modelo sobre la Etiqueta Restringida
+- **conocimiento estructural del dato**;
+- **conocimiento del modelo/etiqueta**;
+- y debe ser **local por muestra**.
 
-Evalúa qué tan probable es que la **etiqueta de clasificación original** $y_i$ coincida con el **cluster restringido asignado** $\hat{z}_i^{\text{rest}}$:
+En esta tesis, esa intuición se reutiliza así: cada muestra recibe una confiabilidad \(r_i\) que combina evidencia estructural y evidencia supervisada, y luego \(r_i\) afecta tanto el término global como el término de compatibilidad de tamaño.
 
-$$MPPL^{\text{rest}}(x_i) = p(y_i = \hat{z}_i^{\text{rest}})$$
+---
 
-Dado que las etiquetas son discretas, esta probabilidad se estima como la proporción de muestras de la clase $y_i$ que caen en el cluster $\hat{z}_i^{\text{rest}}$ (pureza local):
+## 4. Extensión axiomática: nuevo principio para restricciones de tamaño
 
-$$MPPL^{\text{rest}}(x_i) = \frac{|\{x_j : y_j = y_i,\; \hat{z}_j^{\text{rest}} = \hat{z}_i^{\text{rest}}\}|}{|\{x_j : \hat{z}_j^{\text{rest}} = \hat{z}_i^{\text{rest}}\}|}$$
+Los axiomas A1–A4 no cubren la relación entre la estructura natural del dataset y una región factible de tamaños. Por eso se propone un nuevo axioma.
 
-Valores cercanos a 1 indican que el cluster restringido al que fue asignada $x_i$ está dominado por su clase, i.e., la etiqueta original es una guía confiable para ese cluster.
+## A5. Invariancia / Monotonicidad por Compatibilidad de Tamaño
 
-#### Métrica por Muestra y Global
+Sea \(m(C)\in \Delta^{K-1}\) el vector de masas naturales inducido por una partición \(C\), con
 
-El score por muestra, siguiendo la arquitectura JMDS, es el producto:
+\[
+m_k(C)=\frac{|C_k|}{\sum_{j=1}^K |C_j|}.
+\]
 
-$$JMDS\text{-}T(x_i) = \sigma\!\left(LPG^{\text{rest}}(x_i)\right) \cdot MPPL^{\text{rest}}(x_i) \in [0, 1]$$
+Sea \(d_\Pi(m,\Pi^\*)\) una distancia de proyección desde \(m\) hacia la región factible \(\Pi^\*\).
 
-donde $\sigma(\cdot)$ es la función sigmoidea que normaliza el $LPG$ en $[0,1]$.
+Una métrica de transferencia \(\mathcal T(C,X,\delta;\Pi^\*)\) satisface el axioma A5 si:
 
-La **métrica global de transferencia** del dataset es:
+### A5.1. Máximo en factibilidad exacta
+\[
+m(C)\in \Pi^\* \quad \Longrightarrow \quad \mathcal T_{\text{size}}(C;\Pi^\*)=1.
+\]
 
-$$\boxed{JMDS\text{-}T(D_s, K) = \frac{1}{n}\sum_{i=1}^{n} JMDS\text{-}T(x_i) \in [0, 1]}$$
+### A5.2. Monotonicidad respecto a la distancia factible
+Si
+\[
+d_\Pi(m(C),\Pi_1^\*) \le d_\Pi(m(C),\Pi_2^\*),
+\]
+entonces
+\[
+\mathcal T_{\text{size}}(C;\Pi_1^\*) \ge \mathcal T_{\text{size}}(C;\Pi_2^\*).
+\]
+
+### A5.3. Invariancia a la parametrización de la región factible
+Si dos descripciones \(\Pi_a^\*\) y \(\Pi_b^\*\) representan exactamente la misma región factible en el simplex, entonces:
+\[
+\mathcal T_{\text{size}}(C;\Pi_a^\*)=\mathcal T_{\text{size}}(C;\Pi_b^\*).
+\]
+
+### Por qué A5 no está cubierto por A1–A4
+
+- A1 trata tamaño del dataset, no compatibilidad entre **masas naturales** y **restricciones externas**.
+- A2 trata desplazamiento de distancias, no distribución de tamaños.
+- A3 trata cantidad de clases, no forma de la región factible.
+- A4 trata comparabilidad del rango, no factibilidad estructural.
+
+Es decir: un dataset puede satisfacer perfectamente A1–A4 y aun así ser pésimo para clustering restringido si la estructura natural contradice las restricciones de tamaño.
+
+---
+
+## 5. Construcción de una confiabilidad local integrada
+
+Sea \(z_i=\phi(x_i)\in\mathbb R^d\) una representación del dato. Puede ser:
+
+- el espacio original;
+- un embedding auto-supervisado;
+- o, preferiblemente, una representación aprendida por clasificación.
+
+Queremos una confiabilidad local \(r_i\in[0,1]\) que combine evidencia:
+
+1. **supervisada/modelo**;
+2. **estructural/local**.
+
+## 5.1. Evidencia supervisada
+
+Entrenamos un clasificador \(p_M(y\mid z)\). Para la etiqueta observada \(y_i\):
+
+\[
+u_i = p_M(y_i\mid z_i).
+\]
+
+Este término mide cuánto respalda el modelo discriminativo a la etiqueta de la muestra.
+
+## 5.2. Evidencia estructural
+
+Construimos una distribución estructural \(p_S(y\mid z_i)\) usando, por ejemplo:
+
+- GMM por clase en el espacio \(z\);
+- k-NN label density;
+- o mezcla local basada en grafo.
+
+Una opción simple y robusta es:
+
+\[
+v_i = p_S(y_i\mid z_i).
+\]
+
+También se puede reforzar con un margen estructural:
+
+\[
+g_i = \frac{\ell^{(1)}_i-\ell^{(2)}_i}{|\ell^{(1)}_i|+\varepsilon},
+\]
+
+donde \(\ell^{(1)}_i\) y \(\ell^{(2)}_i\) son el mayor y segundo mayor log-posterior estructural. Entonces se define:
+
+\[
+v_i^\text{margin} = \frac{1+g_i}{2}\in[0,1].
+\]
+
+## 5.3. Fusión local recomendada
+
+No conviene usar simplemente un producto. La mejor opción práctica es una **media armónica**, porque exige que ambas evidencias sean altas, pero sin la fragilidad extrema del producto:
+
+\[
+r_i = \frac{2u_i v_i}{u_i+v_i+\varepsilon}.
+\]
+
+Si se incluye el margen:
+
+\[
+r_i = \frac{3}{\frac{1}{u_i+\varepsilon}+\frac{1}{v_i+\varepsilon}+\frac{1}{v_i^\text{margin}+\varepsilon}}.
+\]
 
 ### Interpretación
+- Si una muestra es “fácil” para clasificación pero estructuralmente ambigua, su peso baja.
+- Si una muestra cae en un núcleo geométrico pero el modelo no respalda la etiqueta, su peso también baja.
+- Los núcleos consistentes de clase obtienen mayor \(r_i\).
 
-- $JMDS\text{-}T \approx 1$: Las etiquetas de clasificación son guías confiables para el clustering restringido. Las muestras son asignadas con alta certeza a clusters que coinciden con sus clases originales, incluso bajo la restricción.
-- $JMDS\text{-}T \approx 0$: El clustering restringido rompe la correspondencia entre etiquetas y clusters. El dataset no es transferible en este escenario.
-
-**Uso adicional — ponderación de muestras:** Un subproducto valioso de $JMDS\text{-}T$ es el vector de scores por muestra $\{JMDS\text{-}T(x_i)\}_{i=1}^n$, que puede usarse para **ponderar las muestras** durante el entrenamiento de un clasificador auxiliar o para identificar qué muestras son "anclas confiables" en el espacio de clustering restringido.
-
-### Propiedades y Discusión
-
-| Propiedad | Valor |
-|---|---|
-| Rango | $[0, 1]$ |
-| Requiere ejecutar clustering restringido | Sí |
-| Parámetros libres | $\mu$ (fuerza de penalización) |
-| Interpretabilidad | Alta (confianza promedio por muestra) |
-| Subproducto útil | Pesos por muestra para uso downstream |
-| Costo computacional | Medio-Alto (GMM + clustering restringido) |
-
-**Fortaleza principal:** Es la única propuesta que produce una puntuación **por muestra**, lo que permite identificar qué regiones del espacio de features son transferibles y cuáles no. Esto tiene aplicaciones directas en selección de instancias y curriculum learning.
-
-**Limitación principal:** El parámetro $\mu$ requiere calibración. Además, la estimación de $MPPL^{\text{rest}}$ por pureza local puede ser ruidosa cuando los clusters son pequeños.
+Esto hereda la intuición de JMDS: una muestra confiable debe serlo simultáneamente desde el punto de vista del modelo y de la estructura.
 
 ---
 
-## Propuesta 3 — Extensión Axiomática: Quinto Axioma de Invariancia al Balance de Tamaño
+## 6. Propuesta principal: métrica RTM-H (Reliability-aware Transfer Metric, versión armónica)
 
-### Concepto Central
+Esta es la propuesta más recomendable para una tesis porque es interpretable, implementable y alineada con CLM + JMDS + restricciones de tamaño.
 
-En lugar de diseñar una métrica nueva desde cero, esta propuesta **extiende formalmente el framework axiomático de CLM** con un quinto axioma que hace explícita la necesidad de penalizar datasets cuya distribución de etiquetas es incompatible con las restricciones de tamaño objetivo.
+## 6.1. Distancias ponderadas por confiabilidad
 
-### El Quinto Axioma
+Sea \(d_{ij}=\|z_i-z_j\|^2\). Para cada par de clases \((a,b)\), definimos promedios ponderados:
 
-> **A5 — Invariancia al Balance de Tamaño (Size-Balance Invariance):**
-> Sea $D$ un dataset con distribución de tamaños de clase $\boldsymbol{\pi}^D = (\pi_1^D, \ldots, \pi_C^D)$ y $D'$ un dataset con $\boldsymbol{\pi}^{D'}$. Sea $\mathbf{u}_K = (1/K, \ldots, 1/K)$ la distribución objetivo (clusters uniformes). Si $\boldsymbol{\pi}^D$ y $\boldsymbol{\pi}^{D'}$ difieren únicamente en su distancia a $\mathbf{u}_K$, entonces la métrica de transferencia $\mathcal{M}$ debe satisfacer:
->
-> $$\Delta(\boldsymbol{\pi}^D, \mathbf{u}_K) < \Delta(\boldsymbol{\pi}^{D'}, \mathbf{u}_K) \implies \mathcal{M}(D, K) > \mathcal{M}(D', K)$$
->
-> donde $\Delta$ es una medida de discrepancia (e.g., distancia $W_1$, JSD, variación total).
+\[
+\bar d_{aa}^{(r)}=
+\frac{\sum_{i:y_i=a}\sum_{j:y_j=a,\ j\neq i} r_i r_j d_{ij}}
+{\sum_{i:y_i=a}\sum_{j:y_j=a,\ j\neq i} r_i r_j},
+\]
 
-En palabras: **si el dataset $D$ tiene una distribución de etiquetas más cercana a la distribución objetivo de los clusters, entonces debe recibir una mayor puntuación de transferencia**, todo lo demás igual.
+\[
+\bar d_{bb}^{(r)}=
+\frac{\sum_{i:y_i=b}\sum_{j:y_j=b,\ j\neq i} r_i r_j d_{ij}}
+{\sum_{i:y_i=b}\sum_{j:y_j=b,\ j\neq i} r_i r_j},
+\]
 
-### Motivación del Axioma
+\[
+\bar d_{ab}^{(r)}=
+\frac{\sum_{i:y_i=a}\sum_{j:y_j=b} r_i r_j d_{ij}}
+{\sum_{i:y_i=a}\sum_{j:y_j=b} r_i r_j}.
+\]
 
-Los axiomas A1–A4 de CLM garantizan que una métrica sea válida para comparar datasets en términos de separabilidad y estructura geométrica. Sin embargo, ninguno de ellos contempla la **compatibilidad distribucional** entre las etiquetas fuente y las restricciones del clustering objetivo.
+Esto hace que el score global se apoye más en las regiones localmente confiables.
 
-Un ejemplo que motiva A5: consideremos dos datasets con la misma separabilidad ($CH_A$ idéntico):
-- $D$: clases de tamaños $(50\%, 50\%)$, objetivo $K=2$ clusters iguales → distribución ya compatible.
-- $D'$: clases de tamaños $(90\%, 10\%)$, objetivo $K=2$ clusters iguales → distribución incompatible.
+## 6.2. Score estructural local por par de clases
 
-Sin A5, cualquier métrica basada solo en A1–A4 asignaría igual puntuación a $D$ y $D'$. Con A5, $\mathcal{M}(D, K) > \mathcal{M}(D', K)$ necesariamente.
+Inspirados por el protocolo de invariancia por desplazamiento, definimos:
 
-### Implementación — Factor de Normalización por Entropía
+\[
+\psi_{ab} =
+\frac{
+\exp\left(\bar d_{ab}^{(r)}/s_{ab}\right)
+}{
+\exp\left(\bar d_{ab}^{(r)}/s_{ab}\right) +
+\exp\left(\frac{\bar d_{aa}^{(r)}+\bar d_{bb}^{(r)}}{2s_{ab}}\right)
+},
+\]
 
-A5 se implementa modificando los **protocolos de ajuste T1–T4 de Jeon et al.** para incluir un factor de normalización basado en la compatibilidad distribucional. Se proponen dos implementaciones:
+donde \(s_{ab}\) es una escala auto-calibrada, por ejemplo la desviación estándar de las distancias entre muestras de las clases \(a\) y \(b\).
 
-#### Implementación A — Factor Multiplicativo Entrópico
+### Lectura de \(\psi_{ab}\)
+- sube cuando la distancia entre clases supera la dispersión intra-clase;
+- cae si las clases están mezcladas o internamente muy dispersas.
 
-Definir el factor de balance como:
+## 6.3. Score estructural global
 
-$$\Phi(D_s, K) = \exp\!\left(-\lambda \cdot \text{JSD}(\boldsymbol{\pi}^{\text{clase}}\,\|\,\mathbf{u}_K)\right) \in (0, 1]$$
+Agregamos por pares de clases:
 
-donde $\boldsymbol{\pi}^{\text{clase}} = (|C_1|/n, \ldots, |C_C|/n)$ es la distribución empírica de tamaños de clase y $\mathbf{u}_K = (1/K, \ldots, 1/K)$ es la distribución objetivo. El parámetro $\lambda > 0$ controla la sensibilidad.
+\[
+G_r = \frac{2}{K(K-1)} \sum_{a<b} \psi_{ab}.
+\]
 
-La métrica A5-compatible es:
+Esto mantiene el espíritu de A3: el score global depende de la calidad media por pares, no del mero conteo de clases.
 
-$$\mathcal{M}_{A5}(D_s, K) = CH_A(D_s, K) \cdot \Phi(D_s, K)$$
+## 6.4. Ajuste de rango (estilo CLM)
 
-#### Implementación B — Ajuste Logístico con Covariable de Balance (preferida)
+Para no comparar scores crudos entre datasets, usamos un baseline aleatorio que preserve las proporciones de clase. Sea \(\Pi_\text{perm}\) el conjunto de particiones aleatorias que preservan cardinalidades de clase, y definimos:
 
-Incorporar A5 directamente dentro del ajuste logístico de CLM añadiendo el desequilibrio como covariable:
+\[
+G_{\text{rand}} = \mathbb E_{\pi\sim \Pi_\text{perm}}[G_r(\pi)].
+\]
 
-$$\mathcal{M}_{A5}(D_s, K) = \sigma\!\left(\beta_0 + \beta_1 \cdot \log(CH_K) + \beta_2 \cdot \log\!\left(1 - W_1(\boldsymbol{\pi}^{\text{clase}}, \mathbf{u}_K)\right)\right)$$
+Entonces el score estructural ajustado es
 
-donde $W_1(\boldsymbol{\pi}^{\text{clase}}, \mathbf{u}_K) = \frac{1}{2}\sum_{k}|\pi_k^{\text{clase}} - 1/K|$ es la distancia de Wasserstein discreta entre la distribución de clases y la distribución objetivo.
+\[
+S_{\text{struct}} =
+\left[
+\frac{G_r - G_{\text{rand}}}{1-G_{\text{rand}}+\varepsilon}
+\right]_{[0,1]},
+\]
 
-**Ventaja de la Implementación B:** La penalización de balance queda integrada en la misma función logística que calibra CLM, por lo que hereda automáticamente A1–A4. Los parámetros $(\beta_0, \beta_1, \beta_2)$ se calibran con el mismo protocolo de Jeon et al. ampliado.
+donde \([x]_{[0,1]}=\min(1,\max(0,x))\).
 
-### Relación con los Protocolos T1–T4 de CLM
-
-Los protocolos de ajuste de CLM (T1: escala, T2: rotación, T3: cardinalidad, T4: etiquetas) se extienden con:
-
-> **T5 — Protocolo de Balance de Tamaño:** Para calibrar $\beta_2$, se generan pares de datasets con la misma separabilidad pero diferente distribución de tamaños de clase. Se verifica que $\mathcal{M}_{A5}$ asigna mayor puntaje al dataset más balanceado, y se ajusta $\beta_2$ hasta que la tasa de acierto sobre el conjunto de calibración supere el 95%.
-
-### Propiedades y Discusión
-
-| Propiedad | Valor |
-|---|---|
-| Rango | $[0, 1]$ |
-| Axiomas satisfechos | A1–A5 |
-| Parámetros libres | 3 ($\beta_0, \beta_1, \beta_2$) |
-| Requiere ejecutar clustering restringido | No |
-| Interpretabilidad | Alta (extensión natural de CLM) |
-| Rigor teórico | Alto (contribución axiomática formal) |
-
-**Fortaleza principal:** Es la única propuesta que extiende formalmente un framework teórico existente. La demostración de que A5 es **independiente** de A1–A4 (i.e., ninguno de ellos implica A5) es en sí misma una contribución teórica de la tesis.
-
-**Limitación principal:** Al no ejecutar clustering restringido, evalúa la compatibilidad distribucional a partir de las etiquetas originales, que pueden no reflejar la estructura geométrica real. Es posible que un dataset con etiquetas desbalanceadas tenga clusters geométricos naturalmente balanceados.
-
-**Recomendación:** Combinar la Propuesta 3 con la Propuesta 1 o 2 para capturar tanto la compatibilidad distribucional (A5) como el efecto geométrico real de la restricción.
-
----
-
-## Cuadro Comparativo de las Tres Propuestas
-
-| Característica | Propuesta 1 ($T\text{-}CH_A$) | Propuesta 2 ($JMDS\text{-}T$) | Propuesta 3 (Axioma A5) |
-|---|---|---|---|
-| **Base teórica** | CLM ($CH_A$) | JMDS (LPG + MPPL) | CLM extendido |
-| **Rango** | $(0, 1]$ | $[0, 1]$ | $[0, 1]$ |
-| **Requiere clustering restringido** | Sí | Sí | No |
-| **Axiomas CLM** | A1–A4 (parcial) | Ninguno | A1–A5 |
-| **Score por muestra** | No | Sí | No |
-| **Parámetros libres** | 0 | 1 ($\mu$) | 3 ($\beta_0,\beta_1,\beta_2$) |
-| **Costo computacional** | Medio | Medio-Alto | Bajo-Medio |
-| **Interpretabilidad** | Alta | Alta | Alta |
-| **Rigor teórico** | Medio | Medio | Alto |
-| **Originalidad** | Media | Media-Alta | Alta |
-| **Uso recomendado** | Baseline interpretable | Ponderación de muestras | Contribución teórica principal |
+### Comentario
+Esto es coherente con CLM:
+- A1: usa estimadores promedio robustos a subsampling proporcional;
+- A2: el ratio exponencial cancela desplazamientos aditivos;
+- A3: agrega por pares de clases;
+- A4: reescala a \([0,1]\) usando un baseline comparable.
 
 ---
 
-## Cuadro Comparativo: Enfoques CLM vs. JMDS para la Métrica de Transferencia
+## 7. Compatibilidad general con restricciones de tamaño
 
-| Característica | Enfoque Basado en CLM | Enfoque Basado en JMDS |
-|---|---|---|
-| **Fortaleza principal** | Validez estadística y teórica sólida (axiomas A1–A4) | Muy efectivo para manejar ruido y etiquetas "sucias" |
-| **Cálculo** | Promedios de distancias euclidianas al cuadrado ($d^2$) | Log-likelihood de GMM y probabilidades de modelo |
-| **Uso en clustering** | Ideal para comparar qué tan "bueno" es un dataset frente a otro | Ideal para dar pesos a las muestras durante el entrenamiento |
-| **Salida** | Escalar global del dataset | Score por muestra + escalar global |
-| **Necesita modelo fuente** | No | Opcional (MPPL requiere clasificador) |
-| **Sensibilidad a dimensionalidad** | Controlada por axioma A2 (shift invariance) | Controlada por el GMM (puede fallar en muy alta dimensión) |
-| **Calibración** | Protocolo T1–T4 con datos humanos | Depende del parámetro $\mu$ y del umbral $\tau$ |
+La parte nueva de la tesis es que el dataset no debe ser solo “clusterizable”, sino también **transferible a clustering restringido**.
+
+## 7.1. Masas naturales confiables
+
+No usamos las cardinalidades brutas de clase. Usamos masas efectivas ponderadas por confiabilidad:
+
+\[
+m_k^{(r)} =
+\frac{\sum_{i=1}^n r_i \mathbf 1[y_i=k]}
+{\sum_{i=1}^n r_i}.
+\]
+
+Definimos
+
+\[
+m^{(r)}=(m_1^{(r)},\dots,m_K^{(r)})\in\Delta^{K-1}.
+\]
+
+Esto tiene una interpretación fuerte: no todas las muestras aportan igual evidencia sobre el “tamaño natural” de un cluster potencial.
+
+## 7.2. Región factible general
+
+Los requerimientos pueden escribirse como:
+
+\[
+\Pi^\*=\{q\in \Delta^{K-1}:\ Aq\le b,\ Cq=d\},
+\]
+
+lo que incluye:
+
+- bounds inferiores/superiores;
+- proporciones objetivo;
+- mezclas de restricciones lineales.
+
+## 7.3. Distancia a la región factible
+
+### Opción recomendada: proyección por Jensen-Shannon
+Para restricciones distribucionales:
+
+\[
+q^\* = \arg\min_{q\in \Pi^\*} \mathrm{JS}(m^{(r)}\|q),
+\]
+
+\[
+D_{\text{size}} = \mathrm{JS}(m^{(r)}\|q^\*).
+\]
+
+Si se usa log base 2, entonces:
+
+\[
+0\le \mathrm{JS}(\cdot,\cdot)\le 1.
+\]
+
+Así, el score de tamaño queda:
+
+\[
+S_{\text{size}} = 1 - D_{\text{size}}.
+\]
+
+### Opción alternativa: proyección euclídea
+Si \(\Pi^\*\) es un politopo simple:
+
+\[
+D_{\text{size}}^{(2)} = \min_{q\in\Pi^\*}\|m^{(r)}-q\|_2,
+\]
+
+\[
+S_{\text{size}}^{(2)} =
+1-\frac{D_{\text{size}}^{(2)}}{D_{\max}(\Pi^\*)}.
+\]
+
+### Opción alternativa: costo de transporte
+Si se quiere capturar “cuánta masa habría que mover”:
+
+\[
+D_{\text{size}}^{\text{OT}}
+=
+\min_{q\in\Pi^\*}\mathrm{OT}(m^{(r)},q).
+\]
+
+Esto es especialmente útil cuando las clases tienen semejanzas semánticas y no todo movimiento de masa debería costar igual.
 
 ---
 
-## Estrategia de Integración Recomendada para la Tesis
+## 8. Fusión final recomendada
 
-Las tres propuestas no son excluyentes. Se recomienda la siguiente arquitectura integrada:
+La métrica final debe exigir simultáneamente:
 
-```
-Dataset fuente D_s
-        │
-        ├─── Propuesta 3 (A5): Compatibilidad distribucional
-        │    → Penalización rápida antes de ejecutar clustering
-        │
-        ├─── Propuesta 1 (T-CH_A): Cohesión geométrica bajo restricción
-        │    → Medición de la "pérdida de energía" estructural
-        │
-        └─── Propuesta 2 (JMDS-T): Confianza por muestra
-             → Identificación de muestras ancla y muestras problemáticas
-                      │
-                      ▼
-            ITCR(D_s, K) = f(T-CH_A, JMDS-T, Φ_{A5})
-```
+- buena estructura;
+- buena compatibilidad de tamaño.
 
-La métrica final $\text{ITCR}$ puede ser una fusión ponderada (Camino 2 del documento metodológico) o una extensión axiomática (Camino 3), donde cada propuesta contribuye uno de los tres factores del producto.
+La fusión recomendada es una **media armónica**:
+
+\[
+\boxed{
+\mathcal T_{\text{RTM-H}}
+=
+\frac{2\,S_{\text{struct}}\,S_{\text{size}}}
+{S_{\text{struct}}+S_{\text{size}}+\varepsilon}
+}
+\]
+
+### Justificación
+No es una multiplicación arbitraria:
+- la media armónica modela un requisito de tipo “conjunción”;
+- penaliza que uno de los dos componentes sea muy bajo;
+- pero es menos frágil que el producto;
+- no requiere hiperparámetros externos.
+
+### Interpretación
+- Si el dataset tiene muy buena CLM pero masas incompatibles con \(\Pi^\*\), la transferibilidad baja.
+- Si las masas encajan perfecto pero la estructura está mal alineada con las etiquetas, también baja.
+- Solo sube cuando ambas condiciones se cumplen.
 
 ---
 
-*Documento de propuestas metodológicas para discusión con el director de tesis.*
+## 9. Dos caminos alternativos adicionales
+
+---
+
+## 9.1. RTM-OT: métrica por transporte óptimo confiable
+
+Esta variante integra localmente estructura, etiquetas y restricciones de tamaño en un mismo problema.
+
+### Paso 1: costo muestra-cluster
+Sea \(k\) un cluster objetivo. Definimos:
+
+\[
+c_{ik}
+=
+-\log p_M(k\mid z_i)
+-\log p_S(k\mid z_i).
+\]
+
+También puede escribirse con ponderación armónica o suma de logits, pero sin calibración externa la suma de costos negativos logarítmicos es muy natural.
+
+### Paso 2: plan de asignación restringido
+Buscamos una matriz \(P\in\mathbb R_+^{n\times K}\):
+
+\[
+\min_{P,q\in\Pi^\*}
+\sum_{i=1}^n \sum_{k=1}^K P_{ik} c_{ik}
++
+\tau \sum_{i,k} P_{ik}\log P_{ik}
+\]
+
+sujeto a:
+
+\[
+\sum_{k=1}^K P_{ik}=\frac1n,\qquad
+\sum_{i=1}^n P_{ik}=q_k.
+\]
+
+### Score
+\[
+\mathcal T_{\text{RTM-OT}} = 1-\frac{\mathcal C^\*-\mathcal C_{\min}}{\mathcal C_{\max}-\mathcal C_{\min}+\varepsilon}.
+\]
+
+### Ventajas
+- integra tamaño desde el núcleo del modelo;
+- da asignaciones suaves;
+- produce explicaciones a nivel muestra-cluster.
+
+### Limitaciones
+- costo computacional mayor;
+- requiere resolver OT/ Sinkhorn;
+- más difícil de explicar si la tesis busca una métrica sencilla.
+
+---
+
+## 9.2. RTM-Graph: métrica basada en grafo y cortes restringidos
+
+### Construcción
+Construimos un grafo de afinidad \(W\) sobre los embeddings \(z_i\). Para la partición dada por las etiquetas, definimos un normalized cut confiable:
+
+\[
+\mathrm{NCut}_r(C)=
+\sum_{k=1}^K
+\frac{\mathrm{cut}_r(C_k,\bar C_k)}{\mathrm{vol}_r(C_k)},
+\]
+
+donde
+
+\[
+\mathrm{cut}_r(A,B)=\sum_{i\in A, j\in B} r_i r_j W_{ij},
+\qquad
+\mathrm{vol}_r(A)=\sum_{i\in A,j} r_i r_j W_{ij}.
+\]
+
+Luego se combina con una penalización de factibilidad:
+
+\[
+\mathcal T_{\text{RTM-Graph}}
+=
+1-\alpha \,\widetilde{\mathrm{NCut}}_r
+-(1-\alpha)\,D_{\text{size}}.
+\]
+
+### Recomendación
+Útil como línea secundaria, especialmente si la tesis explora subespacios o selección de features mediante grafos. Pero no es mi primera opción como propuesta central porque introduce un hiperparámetro \(\alpha\).
+
+---
+
+## 10. Propiedades teóricas de RTM-H
+
+## 10.1. Respecto a A1–A4
+
+### A1. Invariancia a cardinalidad
+Los términos \(\bar d_{aa}^{(r)}, \bar d_{ab}^{(r)}\) son medias ponderadas. Bajo subsampling proporcional por clase, convergen al mismo valor poblacional.
+
+### A2. Invariancia a desplazamiento
+Si todas las distancias se desplazan por una constante \(\beta\), el cociente exponencial de \(\psi_{ab}\) conserva el orden relativo entre separación inter-clase y dispersión intra-clase.
+
+### A3. Invariancia al número de clases
+El score global promedia sobre pares de clases.
+
+### A4. Invariancia de rango
+El ajuste con \(G_{\text{rand}}\) y el clipping a \([0,1]\) hacen el score comparable entre datasets.
+
+## 10.2. Respecto a A5
+
+\[
+m^{(r)}\in\Pi^\* \Rightarrow S_{\text{size}}=1
+\Rightarrow
+\mathcal T_{\text{RTM-H}}
+=
+\frac{2S_{\text{struct}}}{1+S_{\text{struct}}}
+\]
+
+y si además \(S_{\text{struct}}=1\), entonces \(\mathcal T_{\text{RTM-H}}=1\).
+
+Si la distancia a \(\Pi^\*\) crece, \(S_{\text{size}}\) decrece monótonamente y por ende también lo hace \(\mathcal T_{\text{RTM-H}}\).
+
+---
+
+## 11. Diseño experimental para validar la métrica
+
+## 11.1. Datasets
+
+Usar:
+
+- MNIST
+- Fashion-MNIST
+- CIFAR-10
+- CIFAR-100 (opcional, con agrupación por superclases)
+- STL-10 o Tiny-ImageNet como extensión
+
+## 11.2. Espacios de representación
+
+Para no sesgar el resultado a un único espacio, probar al menos tres representaciones:
+
+1. píxeles reducidos por PCA;
+2. embeddings auto-supervisados;
+3. embeddings de una red entrenada para clasificación.
+
+La métrica debe evaluarse sobre el espacio donde se planea ejecutar clustering.
+
+## 11.3. Generación de restricciones de tamaño
+
+No centrarse en balanced k-means. Diseñar varios regímenes:
+
+### Régimen A: cotas amplias
+\[
+L_k = 0.6\,n\pi_k,\qquad U_k = 1.4\,n\pi_k.
+\]
+
+### Régimen B: proporciones no uniformes
+Elegir objetivos como:
+
+\[
+\pi^\*=(0.40,0.25,0.15,0.10,0.10)
+\]
+
+para \(K=5\), o análogos para otros \(K\).
+
+### Régimen C: región factible
+Definir poliedros con:
+- bounds por grupo,
+- suma parcial de ciertos clusters,
+- o restricciones del tipo:
+  \[
+  \pi_1+\pi_2\le 0.45.
+  \]
+
+### Régimen D: factibilidad degradada
+Tomar la masa natural estimada \(m^{(r)}\) y alejarla gradualmente hacia regiones menos compatibles mediante interpolación:
+
+\[
+\pi^\*(\lambda)= (1-\lambda)m^{(r)}+\lambda \tilde \pi,
+\qquad \lambda\in[0,1].
+\]
+
+Esto permite sensibilidad controlada.
+
+## 11.4. Algoritmos de clustering restringido
+
+Comparar con varios algoritmos, no solo uno:
+
+- constrained k-means con bounds;
+- COP-k-means si se desea incorporar restricciones adicionales;
+- balanced / capacity-constrained variants solo como caso particular;
+- métodos de asignación por min-cost flow;
+- variantes con Sinkhorn o OT si se implementa.
+
+## 11.5. Definición de “calidad real” del clustering restringido
+
+Para cada dataset y conjunto de restricciones, correr clustering restringido y medir:
+
+- NMI / AMI frente a las etiquetas;
+- ARI;
+- pureza;
+- costo intra-cluster;
+- violación de restricciones (debe ser 0 o muy pequeña);
+- estabilidad entre reinicios.
+
+Definir un score compuesto real:
+
+\[
+Q_{\text{real}} = \eta_1 \,\mathrm{AMI}
++\eta_2 \,\mathrm{ARI}
++\eta_3 \,(1-\widetilde{\text{cost}})
++\eta_4 \,\mathrm{stability},
+\]
+
+o alternativamente trabajar con cada métrica por separado para evitar arbitrariedad.
+
+## 11.6. Validación principal
+
+Para cada dataset \(D\), representación \(\phi\), y restricción \(\Pi^\*\):
+
+1. calcular \(\mathcal T_{\text{RTM-H}}(D,\Pi^\*)\);
+2. ejecutar clustering restringido;
+3. medir calidad real \(Q_{\text{real}}\).
+
+Luego medir:
+
+- correlación de Spearman entre \(\mathcal T\) y \(Q_{\text{real}}\);
+- correlación de Kendall;
+- calibración ordinal top-k;
+- error al ordenar datasets por transferibilidad real.
+
+## 11.7. Baselines
+
+Comparar contra:
+
+### Baselines globales clásicos
+- Calinski-Harabasz
+- Silhouette
+- Davies-Bouldin
+- Dunn
+- índices ajustados tipo CLM si los implementas
+
+### Baselines locales / híbridos
+- promedio de márgenes del clasificador;
+- entropía media;
+- score tipo JMDS adaptado de forma naive;
+- pura compatibilidad de tamaño \(S_{\text{size}}\) sin estructura;
+- pura estructura \(S_{\text{struct}}\) sin tamaño.
+
+Lo importante es mostrar que:
+1. un score global sin tamaño es insuficiente;
+2. un score de tamaño sin estructura es insuficiente;
+3. una mezcla naive también es peor que la integración propuesta.
+
+## 11.8. Análisis de sensibilidad
+
+Hacer curvas respecto a:
+
+- intensidad del desbalance;
+- amplitud de bounds \([L_k,U_k]\);
+- distancia entre masa natural y masa objetivo;
+- calidad del embedding;
+- cantidad de clases \(K\);
+- presencia de clases multimodales.
+
+## 11.9. Ablación
+
+Probar:
+
+1. sin confiabilidad local: \(r_i=1\);
+2. solo evidencia supervisada: \(r_i=u_i\);
+3. solo evidencia estructural: \(r_i=v_i\);
+4. fusión por producto;
+5. fusión por media armónica;
+6. masa bruta \(m\) vs masa confiable \(m^{(r)}\).
+
+Esto es crítico para demostrar que la integración local realmente aporta.
+
+---
+
+## 12. Uso para selección de subespacios o features
+
+Aquí la métrica puede convertirse en criterio de búsqueda de subespacios:
+
+\[
+S^\* = \arg\max_{S\subset\{1,\dots,p\}} \mathcal T(\mathcal D_s^S,\Pi^\*),
+\]
+
+donde \(\mathcal D_s^S\) es el dataset restringido a las features \(S\).
+
+## 12.1. Procedimiento
+
+1. seleccionar un subconjunto de features;
+2. calcular embeddings o trabajar en el subespacio directamente;
+3. computar \(r_i\), \(S_{\text{struct}}\), \(S_{\text{size}}\);
+4. evaluar \(\mathcal T\);
+5. usar búsqueda greedy, forward selection, beam search o algoritmo genético.
+
+## 12.2. Interpretación
+
+Un subespacio es bueno si simultáneamente:
+
+- hace las etiquetas más coherentes con la geometría;
+- reduce regiones ambiguas;
+- y produce masas naturales más compatibles con la restricción.
+
+Esto es superior a seleccionar features solo con clasificación o solo con clustering clásico.
+
+## 12.3. Variante regularizada
+
+Si se quiere evitar subespacios grandes:
+
+\[
+\mathcal T_{\lambda}(S)=\mathcal T(S)-\lambda\frac{|S|}{p}.
+\]
+
+Si no se desean hiperparámetros libres, usar selección por presupuesto fijo de features en lugar de penalización.
+
+---
+
+## 13. Ventajas y limitaciones
+
+## Ventajas
+
+- integra CLM y confianza local en una sola construcción;
+- incorpora restricciones de tamaño no uniformes;
+- no depende de balanced clustering;
+- usa componentes interpretables;
+- evita calibración externa fuerte;
+- puede emplearse para ranking de datasets, embeddings o subespacios.
+
+## Limitaciones
+
+- depende de la calidad del embedding \(\phi\);
+- si las etiquetas tienen semántica muy distinta de la geometría visual, el score puede ser bajo incluso con alta utilidad para clasificación;
+- el cálculo de \(G_{\text{rand}}\) requiere permutaciones Monte Carlo;
+- para datasets muy grandes, las distancias por pares requieren aproximaciones.
+
+## Soluciones prácticas
+- usar mini-batches o muestreo por clase para estimar distancias;
+- usar k-NN graph en vez de todas las parejas;
+- estimar \(G_{\text{rand}}\) con 20–50 permutaciones;
+- usar PCA previa o embeddings compactos.
+
+---
+
+## 14. Recomendación final para la tesis
+
+Si tuviera que elegir una propuesta central para desarrollar, implementaría:
+
+\[
+\boxed{\mathcal T_{\text{RTM-H}}}
+\]
+
+porque cumple mejor con lo que necesitas:
+
+1. mantiene el espíritu axiomático de CLM;
+2. integra confianza local al estilo JMDS, pero sin separarla como bloque externo;
+3. incorpora formalmente restricciones generales de tamaño mediante A5;
+4. es suficientemente concreta para tesis, experimentación y ablation.
+
+Usaría además:
+
+- **RTM-OT** como extensión teórica fuerte;
+- **RTM-Graph** como línea complementaria para subspace selection.
+
+---
+
+## 15. Forma resumida de la propuesta principal
+
+### Paso 1
+Obtener embeddings \(z_i=\phi(x_i)\).
+
+### Paso 2
+Construir evidencia supervisada \(u_i\) y estructural \(v_i\).
+
+### Paso 3
+Fusionarlas en una confiabilidad local:
+
+\[
+r_i = \frac{2u_i v_i}{u_i+v_i+\varepsilon}.
+\]
+
+### Paso 4
+Calcular el score estructural ajustado:
+
+\[
+S_{\text{struct}} =
+\left[
+\frac{
+\frac{2}{K(K-1)}\sum_{a<b}\psi_{ab}
+-
+G_{\text{rand}}
+}{
+1-G_{\text{rand}}+\varepsilon
+}
+\right]_{[0,1]}.
+\]
+
+### Paso 5
+Calcular masa confiable:
+
+\[
+m_k^{(r)} =
+\frac{\sum_i r_i \mathbf 1[y_i=k]}
+{\sum_i r_i}.
+\]
+
+### Paso 6
+Proyectar \(m^{(r)}\) hacia \(\Pi^\*\) y obtener:
+
+\[
+S_{\text{size}} = 1-\min_{q\in\Pi^\*}\mathrm{JS}(m^{(r)}\|q).
+\]
+
+### Paso 7
+Fusionar:
+
+\[
+\boxed{
+\mathcal T_{\text{RTM-H}}
+=
+\frac{2S_{\text{struct}}S_{\text{size}}}
+{S_{\text{struct}}+S_{\text{size}}+\varepsilon}
+}
+\]
+
+---
+
+## 16. Hipótesis de investigación derivables
+
+1. **H1:** \(\mathcal T_{\text{RTM-H}}\) correlaciona mejor con la calidad real del clustering restringido que CH, Silhouette y Davies-Bouldin.
+2. **H2:** incorporar confiabilidad local mejora la correlación frente a una versión puramente global.
+3. **H3:** usar masa confiable \(m^{(r)}\) supera a usar proporciones brutas de clase.
+4. **H4:** la compatibilidad con \(\Pi^\*\) explica parte de la varianza que las métricas globales tradicionales no capturan.
+5. **H5:** maximizar \(\mathcal T_{\text{RTM-H}}\) sobre subespacios produce representaciones más útiles para clustering restringido.
+
+---
+
+## 17. Cierre
+
+La idea más fuerte para tu tesis es reinterpretar la “transferibilidad” no como una simple semejanza entre clasificación y clustering, sino como una **compatibilidad triple**:
+
+- compatibilidad entre etiquetas y estructura global;
+- compatibilidad entre etiquetas y soporte local por muestra;
+- compatibilidad entre la masa natural inducida por esa estructura y la región factible de tamaños.
+
+Esa es precisamente la parte novedosa: pasar de “¿las clases parecen clusters?” a
+
+\[
+\text{“¿las clases inducen una estructura confiable y utilizable bajo restricciones generales de tamaño?”}
+\]
+
+y medirlo formalmente con una métrica implementable.

@@ -1,247 +1,99 @@
-# 📘 Propuestas de Métrica de Transferencia para Clustering
+Diseño de una Métrica de Transferencia para la Utilización de Conjuntos de Datos de Clasificación en Tareas de Clustering
 
-## Título de la tesis
+1. Extensión Teórica: El Axioma de Compatibilidad de Restricción (A5)
 
-**Diseño de una Métrica de Transferencia para la Utilización de Conjuntos de Datos de Clasificación en Tareas de Clustering**
+El marco axiomático original de CLM establece que una métrica de validación debe ser invariante a la cardinalidad de los datos (A1), al desplazamiento en altas dimensiones (A2), al número de clases (A3) y mantener un rango acotado (A4).
 
----
+Sin embargo, estos axiomas asumen implícitamente que un clustering es "bueno" si refleja la estructura topológica natural de los datos. En un entorno con restricciones de tamaño (size-constrained clustering), la topología natural puede entrar en conflicto directo con las proporciones exigidas por la tarea.
 
-# 🧠 Contexto General
+Por lo tanto, propongo introducir un quinto axioma (A5) para tu tesis:
 
-Esta investigación se fundamenta en tres pilares:
+Axioma A5: Invariancia y Penalización por Factibilidad de Restricción (Constraint-Feasibility Compatibility)
 
-* **CLM (Cluster-Label Matching)** → mide qué tan bien las etiquetas representan la estructura natural
-* **JMDS (Joint Model-Data Structure)** → mide la confiabilidad de asignaciones individuales
-* **Clustering con restricciones de tamaño** → introduce condiciones realistas (balance, capacidad)
+Una métrica de transferencia $f(C, X, \delta, \Pi^*)$ evaluada sobre un conjunto de datos $X$ con partición natural $C$ y una región de tamaños factibles $\Pi^*$, debe penalizar estrictamente la divergencia entre la distribución empírica de clases $\pi$ y el punto óptimo proyectado $\hat{\pi} \in \Pi^*$. Además, la magnitud de esta penalización debe ser proporcional a la certeza estructural de las muestras que deben ser reasignadas para satisfacer $\Pi^*$.
 
-## Problema identificado
+Justificación de A5: A1-A4 no cubren esto porque evalúan la calidad intrínseca del etiquetado asumiendo clusters libres. Si un algoritmo debe forzar proporciones $\Pi^*$, inevitablemente romperá fronteras naturales. Un dataset es apto para transferencia solo si la masa de datos que debe moverse para satisfacer la restricción habita en regiones de baja confianza estructural.
 
-Las métricas existentes:
+2. Diseño de la Métrica de Transferencia Acoplada ($T_{C \to C}$)
 
-* No consideran restricciones estructurales
-* No combinan análisis global (dataset) con análisis local (instancias)
+Para evitar depender de factores externos calibrados empíricamente y para integrar JMDS y CLM de forma coherente, propongo que la métrica evalúe el Costo Esperado de Cumplimiento de Restricciones.
 
----
+2.1. Confianza Local a nivel de Muestra (Inspiración JMDS)
 
-# 🚀 Propuesta 1: TCMS
+Primero, evaluamos cada muestra $x_i$ usando una lógica análoga a JMDS (que combina la estructura de datos LPG y el conocimiento del modelo MPPL). Como tenemos etiquetas reales (no pseudo-etiquetas), definimos la confianza de la muestra $\gamma(x_i) \in [0,1]$ como:
 
-## Transferability under Constrained Metric Structure
+$$\gamma(x_i) = \text{LPG}(x_i) \times P_{struct}(y_i | x_i)$$
 
-### 🎯 Objetivo
+LPG (Log-Probability Gap Estructural): Utilizando una estimación de densidad local (KDE o GMM sobre el espacio de características), es la diferencia normalizada entre la log-probabilidad de pertenecer a su clase real frente a la clase competidora más cercana. Captura el grado de separación en la frontera.
 
-Evaluar qué tan transferible es un dataset de clasificación a clustering bajo restricciones de tamaño.
+$P_{struct}(y_i | x_i)$: La probabilidad de consistencia local (por ejemplo, la proporción de k-vecinos más cercanos que comparten la misma etiqueta $y_i$).
 
-### 📐 Fórmula
+Muestras en el núcleo profundo del cluster tendrán $\gamma(x_i) \approx 1$. Muestras en fronteras ambiguas tendrán $\gamma(x_i) \approx 0$.
 
-```
-TCMS = α · CLM + β · StructuralConfidence − γ · SizeViolation
-```
+2.2. Penalización Macroscópica por Restricciones de Tamaño
 
----
+Sean $\pi = (\pi_1, \dots, \pi_K)$ las proporciones naturales de las clases en el dataset fuente. Sea $\Pi^*$ el espacio factible definido por las restricciones del usuario (por ejemplo, $L_k \le n_k \le U_k$).
 
-## 🔹 Componentes
+Encontramos la distribución objetivo más cercana $\hat{\pi} \in \Pi^*$ minimizando el costo de transporte óptimo (Wasserstein) o la divergencia KL:
 
-### 1. CLM (base)
+$$\hat{\pi} = \arg\min_{p \in \Pi^*} D_{KL}(\pi || p)$$
 
-* Basado en CHA
-* Evalúa alineación entre clases y clusters
+El exceso de masa que debe ser desplazado (reasignado) del cluster $k$ es el ratio de desbordamiento:
 
----
+$$\Delta_k = \max(0, \pi_k - \hat{\pi}_k)$$
 
-### 2. Structural Confidence (inspirado en JMDS)
+2.3. Integración Coherente (Métrica Final Auto-calibrada)
 
-```
-SC(x_i) = Separation(x_i) · Stability(x_i)
-```
+Aquí es donde la magia ocurre. Si el algoritmo de clustering tiene que quitar $\Delta_k$ proporción de datos de la clase $k$, lo ideal es que quite los datos más ambiguos (menor $\gamma(x_i)$).
 
-#### Separation
+Si ordenamos las muestras de la clase $k$ de menor a mayor confianza $\gamma$, el Costo de Reasignación Estructural para esa clase es la integral de la confianza de las muestras que inevitablemente serán reasignadas. Sea $F_k^{-1}$ la función de distribución inversa (cuantil) empírica de las confianzas $\gamma$ dentro de la clase $k$. La penalización de tamaño para la clase $k$ es:
 
-Distancia entre el cluster asignado y el más cercano:
+$$P_{size}(k) = \frac{1}{\Delta_k} \int_{1-\Delta_k}^{1} F_k^{-1}(q) dq$$
 
-```
-Separation = d(x_i, C_j) − d(x_i, C_k)
-```
+(Si un cluster debe ceder el 10% de su masa ($\Delta_k = 0.1$), $P_{size}$ mide la confianza media del 10% de las muestras menos seguras. Si incluso los puntos marginales tienen alta confianza, significa que romper el cluster destruirá topología fuerte, lo que resulta en una penalización alta).
 
-#### Stability
+La métrica de transferencia global $T_{C \to C}$ se formula combinando una evaluación estructural base (como $CH_A$ que cumple A1-A4) descontando el costo de las restricciones (A5):
 
-Consistencia del clustering:
+$$T_{C \to C} = \text{IVM}_A(X, C) \times \left( 1 - \sum_{k=1}^K \omega_k P_{size}(k) \right)$$
 
-```
-Stability = frecuencia de asignación al mismo cluster
-```
+Donde $\omega_k = \Delta_k / \sum_j \Delta_j$. Esta métrica está inherentemente acotada en $[0,1]$ asumiendo que el $\text{IVM}_A$ esté normalizado, no requiere calibración de hiperparámetros de escala, y fusiona la topología microscópica (JMDS) con la restricción macroscópica (CLM/A5).
 
----
+3. Diseño Experimental Sugerido
 
-### 3. Size Violation
+Para validar la métrica rigurosamente sin caer en la trampa del k-means balanceado:
 
-```
-SizeViolation = Σ max(0, |C_k| − U_k) + max(0, L_k − |C_k|)
-```
+1. Preparación de Datasets (Ej: CIFAR-10, Fashion-MNIST):
 
----
+Extrae embeddings usando una red preentrenada (ej. ResNet para CIFAR-10). Crea múltiples sub-versiones (escenarios) de los datasets inyectando desequilibrios intencionales (ej. Clase 1 = 50% de los datos, Clase 2 = 5%).
 
-## 💡 Interpretación
+2. Definición de Restricciones $\Pi^*$ (Variables Independientes):
 
-* Alto TCMS → dataset adecuado para clustering real
-* Bajo TCMS → dataset problemático bajo restricciones
+Escenario A (Relajado): Bounds amplios que incluyen las proporciones naturales.
 
----
+Escenario B (Estricto y Conflictivo): Exigir particiones uniformes (10% por clase) sobre un dataset naturalmente desbalanceado.
 
-# 🧠 Propuesta 2: C-CLM
+Escenario C (Sesgado): Exigir que una clase específica contenga el 40% de los datos cuando naturalmente tiene el 10%.
 
-## Constrained CLM
+3. Baselines de Validación:
 
-### 🎯 Objetivo
+Compara $T_{C \to C}$ contra CH, Silhouette, Davies-Bouldin, y las versiones ajustadas puras propuestas por Jeon et al. ($CH_A$).
 
-Modificar CLM incorporando balance de clusters
+4. Ejecución y Medición (Variable Dependiente):
 
-### 📐 Fórmula
+Aplica algoritmos de Size-Constrained Clustering (como Constrained K-Means de Bradley et al. o enfoques basados en Optimal Transport). Calcula métricas externas de éxito (Adjusted Rand Index o NMI) comparando el output restringido contra las etiquetas reales.
 
-```
-C-CLM = CHA · exp(−λ · SizeVariance)
-```
+5. Análisis de Correlación:
 
-### 📊 SizeVariance
+Demuestra mediante correlación de rango de Spearman que $T_{C \to C}$ predice el NMI final mucho mejor que los índices estándar, especialmente en los escenarios conflictivos (B y C), demostrando que la penalización por reasignación de alta confianza captura la verdadera "transferibilidad".
 
-```
-Var(|C_1|, ..., |C_K|)
-```
+4. Aplicación: Selección de Subespacios / Feature Selection
 
----
+Tu métrica no solo sirve para evaluación, sino como función objetivo para mejorar el espacio latente antes del clustering.
 
-## 💡 Interpretación
+Dado que $T_{C \to C}$ evalúa qué tan doloroso es imponer la restricción de tamaño, podemos utilizar un vector de pesos binario o continuo $w \in [0,1]^D$ sobre las características y resolver:
 
-* Penaliza datasets desbalanceados
-* Fácil implementación
+$$w^* = \arg\max_{w} T_{C \to C}(X \odot w, C, \Pi^*)$$
 
----
+Al optimizar esto (mediante búsqueda voraz, algoritmos genéticos, o descenso de gradiente si relajas la métrica para hacerla diferenciable), el modelo seleccionará subespacios (features) donde las fronteras entre clases en las regiones que deben ser reasignadas sean lo más difusas y superpuestas posible, disminuyendo $P_{size}(k)$.
 
-# 🚀 Propuesta 3: JMDS Adaptado a Clustering
-
-### 🎯 Objetivo
-
-Evaluar la clusterabilidad a nivel de muestra
-
-### 📐 Fórmula
-
-```
-JMDS_c(x_i) = LPG_c(x_i) · Stability_c(x_i)
-```
-
----
-
-## 🔹 Componentes
-
-### LPG_c
-
-```
-log P(cluster_i) − log P(cluster_j)
-```
-
----
-
-### Stability_c
-
-Consistencia en múltiples ejecuciones
-
----
-
-## 📊 Score global
-
-```
-DatasetScore = (1/N) Σ JMDS_c(x_i)
-```
-
----
-
-# 🧠 Propuesta 4: TDS
-
-## Transfer Difficulty Score
-
-### 🎯 Objetivo
-
-Medir dificultad de transición clasificación → clustering
-
-### 📐 Fórmula
-
-```
-TDS = H(Labels | Clusters) + SizePenalty
-```
-
----
-
-## 🔹 Componentes
-
-### Entropía condicional
-
-Mide mezcla de clases dentro de clusters
-
----
-
-### SizePenalty
-
-Penalización por restricciones
-
----
-
-## 💡 Interpretación
-
-* Alto TDS → difícil clusterizar
-* Bajo TDS → buena estructura
-
----
-
-# 🚀 Propuesta 5: HCM
-
-## Hybrid CLM-JMDS Metric
-
-### 🎯 Objetivo
-
-Combinar evaluación global y local
-
-### 📐 Fórmula
-
-```
-HCM = CHA · (1/N Σ JMDS(x_i))
-```
-
----
-
-## 💡 Interpretación
-
-* CHA → estructura global
-* JMDS → confianza local
-
----
-
-# 🧪 Evaluación Experimental
-
-## Dataset sugeridos
-
-* MNIST
-* CIFAR-10
-* Office-31
-
----
-
-## Experimentos
-
-1. Clustering normal vs restringido
-2. Comparación con métricas tradicionales
-3. Correlación con accuracy
-
----
-
-# 🧠 Conclusión
-
-Estas propuestas permiten:
-
-* Extender CLM hacia escenarios reales
-* Integrar confiabilidad tipo JMDS
-* Introducir restricciones estructurales
-
----
-
-# 🚀 Contribución principal
-
-"Diseño de una métrica híbrida que integra alineación estructural, confiabilidad local y restricciones de tamaño para evaluar la transferibilidad de datasets de clasificación a clustering."
+En la práctica, esto significa que el feature selection deforma el espacio para que los clusters naturalmente absorban las restricciones de tamaño sin sacrificar la coherencia de su núcleo denso.
