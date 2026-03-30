@@ -10,7 +10,15 @@ Por lo tanto, propongo introducir un quinto axioma (A5) para tu tesis:
 
 Axioma A5: Invariancia y Penalización por Factibilidad de Restricción (Constraint-Feasibility Compatibility)
 
-Una métrica de transferencia $f(C, X, \delta, \Pi^*)$ evaluada sobre un conjunto de datos $X$ con partición natural $C$ y una región de tamaños factibles $\Pi^*$, debe penalizar estrictamente la divergencia entre la distribución empírica de clases $\pi$ y el punto óptimo proyectado $\hat{\pi} \in \Pi^*$. Además, la magnitud de esta penalización debe ser proporcional a la certeza estructural de las muestras que deben ser reasignadas para satisfacer $\Pi^*$.
+### Definición de la Métrica de Transferencia
+
+Una métrica de transferencia $f(C, X, \delta, \Pi^*)$ evaluada sobre un conjunto de datos $X$ con partición natural $C$ y una región de tamaños factibles $\Pi^*$, debe cumplir con los siguientes criterios:
+
+* **Penalización de divergencia:** Debe penalizar estrictamente la divergencia entre la distribución empírica de clases $\pi$ y el punto óptimo proyectado $\hat{\pi} \in \Pi^*$.
+* **Proporcionalidad estructural:** La magnitud de esta penalización debe ser proporcional a la **certeza estructural** de las muestras que deben ser reasignadas para satisfacer $\Pi^*$.
+
+Esto se puede expresar formalmente como una función de penalización donde:
+$$\Psi_{\text{size}}(D, \Pi^*) = 1 - \delta_{\Pi}(\hat{\pi}, \Pi^*)$$
 
 Justificación de A5: A1-A4 no cubren esto porque evalúan la calidad intrínseca del etiquetado asumiendo clusters libres. Si un algoritmo debe forzar proporciones $\Pi^*$, inevitablemente romperá fronteras naturales. Un dataset es apto para transferencia solo si la masa de datos que debe moverse para satisfacer la restricción habita en regiones de baja confianza estructural.
 
