@@ -9,16 +9,16 @@
 
 Sea un dataset etiquetado fuente
 
-$$
+```math
 \mathcal D_s=\{(x_i,y_i)\}_{i=1}^n,\qquad y_i\in\{1,\dots,K\}.
-$$
+```
 
 Queremos estimar, **antes** de ejecutar clustering restringido, qué tan apto es este dataset para transferirse a una tarea de clustering con restricciones generales de tamaño. La salida deseada es una métrica
 
-$$
+```math
 \mathcal T(\mathcal D_s,\Pi^{*})
 \in [0,1]
-$$
+```
 
 tal que valores altos indiquen que:
 
@@ -26,7 +26,7 @@ tal que valores altos indiquen que:
 2. esa estructura es confiable tanto **globalmente** como **localmente**;
 3. dicha estructura es **compatible** con una región factible de tamaños $\Pi^{*}$, que puede tomar formas como:
    - cotas por cluster:
-     $$
+     ```math
      n_k\in [L_k,U_k],
      ```
    - proporciones objetivo no uniformes:
@@ -56,7 +56,8 @@ No todas las muestras sostienen con la misma fuerza esa estructura. Algunas est�
 Incluso si las etiquetas reflejan bien la estructura, esa estructura puede ser mala candidata para clustering restringido si sus masas naturales son incompatibles con la región factible de tamaños objetivo.
 
 De aquí se desprende una familia de métricas de transferencia:
-$$math
+
+```math
 \mathcal T = \mathrm{Fuse}\big(\text{estructura global ajustada},\ \text{confiabilidad local integrada},\ \text{compatibilidad de tamaño}\big).
 ```
 
@@ -97,34 +98,34 @@ Los axiomas A1–A4 no cubren la relación entre la estructura natural del datas
 
 Sea $m(C)\in \Delta^{K-1}$ el vector de masas naturales inducido por una partición $C$, con
 
-$$
+```math
 m_k(C)=\frac{|C_k|}{\sum_{j=1}^K |C_j|}.
-$$
+```
 
 Sea $d_\Pi(m,\Pi^{*})$ una distancia de proyección desde $m$ hacia la región factible $\Pi^{*}$.
 
 Una métrica de transferencia $\mathcal T(C,X,\delta;\Pi^{*})$ satisface el axioma A5 si:
 
 ### A5.1. Máximo en factibilidad exacta
-$$
+```math
 m(C)\in \Pi^{*} \quad \Longrightarrow \quad \mathcal T_{\text{size}}(C;\Pi^{*})=1.
-$$
+```
 
 ### A5.2. Monotonicidad respecto a la distancia factible
 Si
-$$
+```math
 d_\Pi(m(C),\Pi_1^{*}) \le d_\Pi(m(C),\Pi_2^{*}),
-$$
+```
 entonces
-$$
+```math
 \mathcal T_{\text{size}}(C;\Pi_1^{*}) \ge \mathcal T_{\text{size}}(C;\Pi_2^{*}).
-$$
+```
 
 ### A5.3. Invariancia a la parametrización de la región factible
 Si dos descripciones $\Pi_a^{*}$ y $\Pi_b^{*}$ representan exactamente la misma región factible en el simplex, entonces:
-$$
+```math
 \mathcal T_{\text{size}}(C;\Pi_a^{*})=\mathcal T_{\text{size}}(C;\Pi_b^{*}).
-$$
+```
 
 ### Por qué A5 no está cubierto por A1–A4
 
@@ -154,9 +155,9 @@ Queremos una confiabilidad local $r_i\in[0,1]$ que combine evidencia:
 
 Entrenamos un clasificador $p_M(y\mid z)$. Para la etiqueta observada $y_i$:
 
-$$
+```math
 u_i = p_M(y_i\mid z_i).
-$$
+```
 
 Este término mide cuánto respalda el modelo discriminativo a la etiqueta de la muestra.
 
@@ -170,35 +171,35 @@ Construimos una distribución estructural $p_S(y\mid z_i)$ usando, por ejemplo:
 
 Una opción simple y robusta es:
 
-$$
+```math
 v_i = p_S(y_i\mid z_i).
-$$
+```
 
 También se puede reforzar con un margen estructural:
 
-$$
+```math
 g_i = \frac{\ell^{(1)}_i-\ell^{(2)}_i}{|\ell^{(1)}_i|+\varepsilon},
-$$
+```
 
 donde $\ell^{(1)}_i$ y $\ell^{(2)}_i$ son el mayor y segundo mayor log-posterior estructural. Entonces se define:
 
-$$
+```math
 v_i^\text{margin} = \frac{1+g_i}{2}\in[0,1].
-$$
+```
 
 ## 5.3. Fusión local recomendada
 
 No conviene usar simplemente un producto. La mejor opción práctica es una **media armónica**, porque exige que ambas evidencias sean altas, pero sin la fragilidad extrema del producto:
 
-$$
+```math
 r_i = \frac{2u_i v_i}{u_i+v_i+\varepsilon}.
-$$
+```
 
 Si se incluye el margen:
 
-$$
+```math
 r_i = \frac{3}{\frac{1}{u_i+\varepsilon}+\frac{1}{v_i+\varepsilon}+\frac{1}{v_i^\text{margin}+\varepsilon}}.
-$$
+```
 
 ### Interpretación
 - Si una muestra es “fácil” para clasificación pero estructuralmente ambigua, su peso baja.
@@ -217,23 +218,23 @@ Esta es la propuesta más recomendable para una tesis porque es interpretable, i
 
 Sea $d_{ij}=\|z_i-z_j\|^2$. Para cada par de clases $(a,b)$, definimos promedios ponderados:
 
-$$
+```math
 \bar d_{aa}^{(r)}=
 \frac{\sum_{i:y_i=a}\sum_{j:y_j=a,\ j\neq i} r_i r_j d_{ij}}
 {\sum_{i:y_i=a}\sum_{j:y_j=a,\ j\neq i} r_i r_j},
-$$
+```
 
-$$
+```math
 \bar d_{bb}^{(r)}=
 \frac{\sum_{i:y_i=b}\sum_{j:y_j=b,\ j\neq i} r_i r_j d_{ij}}
 {\sum_{i:y_i=b}\sum_{j:y_j=b,\ j\neq i} r_i r_j},
-$$
+```
 
-$$
+```math
 \bar d_{ab}^{(r)}=
 \frac{\sum_{i:y_i=a}\sum_{j:y_j=b} r_i r_j d_{ij}}
 {\sum_{i:y_i=a}\sum_{j:y_j=b} r_i r_j}.
-$$
+```
 
 Esto hace que el score global se apoye más en las regiones localmente confiables.
 
@@ -241,7 +242,7 @@ Esto hace que el score global se apoye más en las regiones localmente confiable
 
 Inspirados por el protocolo de invariancia por desplazamiento, definimos:
 
-$$
+```math
 \psi_{ab} =
 \frac{
 \exp\left(\bar d_{ab}^{(r)}/s_{ab}\right)
@@ -249,7 +250,7 @@ $$
 \exp\left(\bar d_{ab}^{(r)}/s_{ab}\right) +
 \exp\left(\frac{\bar d_{aa}^{(r)}+\bar d_{bb}^{(r)}}{2s_{ab}}\right)
 },
-$$
+```
 
 donde $s_{ab}$ es una escala auto-calibrada, por ejemplo la desviación estándar de las distancias entre muestras de las clases $a$ y $b$.
 
@@ -261,9 +262,9 @@ donde $s_{ab}$ es una escala auto-calibrada, por ejemplo la desviación estánda
 
 Agregamos por pares de clases:
 
-$$
+```math
 G_r = \frac{2}{K(K-1)} \sum_{a<b} \psi_{ab}.
-$$
+```
 
 Esto mantiene el espíritu de A3: el score global depende de la calidad media por pares, no del mero conteo de clases.
 
@@ -271,18 +272,18 @@ Esto mantiene el espíritu de A3: el score global depende de la calidad media po
 
 Para no comparar scores crudos entre datasets, usamos un baseline aleatorio que preserve las proporciones de clase. Sea $\Pi_\text{perm}$ el conjunto de particiones aleatorias que preservan cardinalidades de clase, y definimos:
 
-$$
+```math
 G_{\text{rand}} = \mathbb E_{\pi\sim \Pi_\text{perm}}[G_r(\pi)].
-$$
+```
 
 Entonces el score estructural ajustado es
 
-$$
+```math
 S_{\text{struct}} =
 \left[
 \frac{G_r - G_{\text{rand}}}{1-G_{\text{rand}}+\varepsilon}
 \right]_{[0,1]},
-$$
+```
 
 donde $[x]_{[0,1]}=\min(1,\max(0,x))$.
 
@@ -303,17 +304,17 @@ La parte nueva de la tesis es que el dataset no debe ser solo “clusterizable�
 
 No usamos las cardinalidades brutas de clase. Usamos masas efectivas ponderadas por confiabilidad:
 
-$$
+```math
 m_k^{(r)} =
 \frac{\sum_{i=1}^n r_i \mathbf 1[y_i=k]}
 {\sum_{i=1}^n r_i}.
-$$
+```
 
 Definimos
 
-$$
+```math
 m^{(r)}=(m_1^{(r)},\dots,m_K^{(r)})\in\Delta^{K-1}.
-$$
+```
 
 Esto tiene una interpretación fuerte: no todas las muestras aportan igual evidencia sobre el “tamaño natural” de un cluster potencial.
 
@@ -321,9 +322,9 @@ Esto tiene una interpretación fuerte: no todas las muestras aportan igual evide
 
 Los requerimientos pueden escribirse como:
 
-$$
+```math
 \Pi^{*}=\{q\in \Delta^{K-1}:\ Aq\le b,\ Cq=d\},
-$$
+```
 
 lo que incluye:
 
@@ -336,46 +337,46 @@ lo que incluye:
 ### Opción recomendada: proyección por Jensen-Shannon
 Para restricciones distribucionales:
 
-$$
+```math
 q^{*} = \arg\min_{q\in \Pi^{*}} \mathrm{JS}(m^{(r)}\|q),
-$$
+```
 
-$$
+```math
 D_{\text{size}} = \mathrm{JS}(m^{(r)}\|q^{*}).
-$$
+```
 
 Si se usa log base 2, entonces:
 
-$$
+```math
 0\le \mathrm{JS}(\cdot,\cdot)\le 1.
-$$
+```
 
 Así, el score de tamaño queda:
 
-$$
+```math
 S_{\text{size}} = 1 - D_{\text{size}}.
-$$
+```
 
 ### Opción alternativa: proyección euclídea
 Si $\Pi^{*}$ es un politopo simple:
 
-$$
+```math
 D_{\text{size}}^{(2)} = \min_{q\in\Pi^{*}}\|m^{(r)}-q\|_2,
-$$
+```
 
-$$
+```math
 S_{\text{size}}^{(2)} =
 1-\frac{D_{\text{size}}^{(2)}}{D_{\max}(\Pi^{*})}.
-$$
+```
 
 ### Opción alternativa: costo de transporte
 Si se quiere capturar “cuánta masa habría que mover”:
 
-$$
+```math
 D_{\text{size}}^{\text{OT}}
 =
 \min_{q\in\Pi^{*}}\mathrm{OT}(m^{(r)},q).
-$$
+```
 
 Esto es especialmente útil cuando las clases tienen semejanzas semánticas y no todo movimiento de masa debería costar igual.
 
@@ -390,14 +391,14 @@ La métrica final debe exigir simultáneamente:
 
 La fusión recomendada es una **media armónica**:
 
-$$
+```math
 \boxed{
 \mathcal T_{\text{RTM-H}}
 =
 \frac{2\,S_{\text{struct}}\,S_{\text{size}}}
 {S_{\text{struct}}+S_{\text{size}}+\varepsilon}
 }
-$$
+```
 
 ### Justificación
 No es una multiplicación arbitraria:
@@ -424,36 +425,36 @@ Esta variante integra localmente estructura, etiquetas y restricciones de tamañ
 ### Paso 1: costo muestra-cluster
 Sea $k$ un cluster objetivo. Definimos:
 
-$$
+```math
 c_{ik}
 =
 -\log p_M(k\mid z_i)
 -\log p_S(k\mid z_i).
-$$
+```
 
 También puede escribirse con ponderación armónica o suma de logits, pero sin calibración externa la suma de costos negativos logarítmicos es muy natural.
 
 ### Paso 2: plan de asignación restringido
 Buscamos una matriz $P\in\mathbb R_+^{n\times K}$:
 
-$$
+```math
 \min_{P,q\in\Pi^{*}}
 \sum_{i=1}^n \sum_{k=1}^K P_{ik} c_{ik}
 +
 \tau \sum_{i,k} P_{ik}\log P_{ik}
-$$
+```
 
 sujeto a:
 
-$$
+```math
 \sum_{k=1}^K P_{ik}=\frac1n,\qquad
 \sum_{i=1}^n P_{ik}=q_k.
-$$
+```
 
 ### Score
-$$
+```math
 \mathcal T_{\text{RTM-OT}} = 1-\frac{\mathcal C^{*}-\mathcal C_{\min}}{\mathcal C_{\max}-\mathcal C_{\min}+\varepsilon}.
-$$
+```
 
 ### Ventajas
 - integra tamaño desde el núcleo del modelo;
@@ -472,28 +473,28 @@ $$
 ### Construcción
 Construimos un grafo de afinidad $W$ sobre los embeddings $z_i$. Para la partición dada por las etiquetas, definimos un normalized cut confiable:
 
-$$
+```math
 \mathrm{NCut}_r(C)=
 \sum_{k=1}^K
 \frac{\mathrm{cut}_r(C_k,\bar C_k)}{\mathrm{vol}_r(C_k)},
-$$
+```
 
 donde
 
-$$
+```math
 \mathrm{cut}_r(A,B)=\sum_{i\in A, j\in B} r_i r_j W_{ij},
 \qquad
 \mathrm{vol}_r(A)=\sum_{i\in A,j} r_i r_j W_{ij}.
-$$
+```
 
 Luego se combina con una penalización de factibilidad:
 
-$$
+```math
 \mathcal T_{\text{RTM-Graph}}
 =
 1-\alpha \,\widetilde{\mathrm{NCut}}_r
 -(1-\alpha)\,D_{\text{size}}.
-$$
+```
 
 ### Recomendación
 Útil como línea secundaria, especialmente si la tesis explora subespacios o selección de features mediante grafos. Pero no es mi primera opción como propuesta central porque introduce un hiperparámetro $\alpha$.
@@ -518,13 +519,13 @@ El ajuste con $G_{\text{rand}}$ y el clipping a $[0,1]$ hacen el score comparabl
 
 ## 10.2. Respecto a A5
 
-$$
+```math
 m^{(r)}\in\Pi^{*} \Rightarrow S_{\text{size}}=1
 \Rightarrow
 \mathcal T_{\text{RTM-H}}
 =
 \frac{2S_{\text{struct}}}{1+S_{\text{struct}}}
-$$
+```
 
 y si además $S_{\text{struct}}=1$, entonces $\mathcal T_{\text{RTM-H}}=1$.
 
@@ -559,16 +560,16 @@ La métrica debe evaluarse sobre el espacio donde se planea ejecutar clustering.
 No centrarse en balanced k-means. Diseñar varios regímenes:
 
 ### Régimen A: cotas amplias
-$$
+```math
 L_k = 0.6\,n\pi_k,\qquad U_k = 1.4\,n\pi_k.
-$$
+```
 
 ### Régimen B: proporciones no uniformes
 Elegir objetivos como:
 
-$$
+```math
 \pi^{*}=(0.40,0.25,0.15,0.10,0.10)
-$$
+```
 
 para $K=5$, o análogos para otros $K$.
 
@@ -577,13 +578,14 @@ Definir poliedros con:
 - bounds por grupo,
 - suma parcial de ciertos clusters,
 - o restricciones del tipo:
-  $$
+  ```math
   \pi_1+\pi_2\le 0.45.
   ```
 
 ### Régimen D: factibilidad degradada
 Tomar la masa natural estimada $m^{(r)}$ y alejarla gradualmente hacia regiones menos compatibles mediante interpolación:
-$$math
+
+```math
 \pi^{*}(\lambda)= (1-\lambda)m^{(r)}+\lambda \tilde \pi,
 \qquad \lambda\in[0,1].
 ```
@@ -613,12 +615,12 @@ Para cada dataset y conjunto de restricciones, correr clustering restringido y m
 
 Definir un score compuesto real:
 
-$$
+```math
 Q_{\text{real}} = \eta_1 \,\mathrm{AMI}
 +\eta_2 \,\mathrm{ARI}
 +\eta_3 \,(1-\widetilde{\text{cost}})
 +\eta_4 \,\mathrm{stability},
-$$
+```
 
 o alternativamente trabajar con cada métrica por separado para evitar arbitrariedad.
 
@@ -690,9 +692,9 @@ Esto es crítico para demostrar que la integración local realmente aporta.
 
 Aquí la métrica puede convertirse en criterio de búsqueda de subespacios:
 
-$$
+```math
 S^{*} = \arg\max_{S\subset\{1,\dots,p\}} \mathcal T(\mathcal D_s^S,\Pi^{*}),
-$$
+```
 
 donde $\mathcal D_s^S$ es el dataset restringido a las features $S$.
 
@@ -718,9 +720,9 @@ Esto es superior a seleccionar features solo con clasificación o solo con clust
 
 Si se quiere evitar subespacios grandes:
 
-$$
+```math
 \mathcal T_{\lambda}(S)=\mathcal T(S)-\lambda\frac{|S|}{p}.
-$$
+```
 
 Si no se desean hiperparámetros libres, usar selección por presupuesto fijo de features en lugar de penalización.
 
@@ -756,9 +758,9 @@ Si no se desean hiperparámetros libres, usar selección por presupuesto fijo de
 
 Si tuviera que elegir una propuesta central para desarrollar, implementaría:
 
-$$
+```math
 \boxed{\mathcal T_{\text{RTM-H}}}
-$$
+```
 
 porque cumple mejor con lo que necesitas:
 
@@ -785,14 +787,14 @@ Construir evidencia supervisada $u_i$ y estructural $v_i$.
 ### Paso 3
 Fusionarlas en una confiabilidad local:
 
-$$
+```math
 r_i = \frac{2u_i v_i}{u_i+v_i+\varepsilon}.
-$$
+```
 
 ### Paso 4
 Calcular el score estructural ajustado:
 
-$$
+```math
 S_{\text{struct}} =
 \left[
 \frac{
@@ -803,35 +805,35 @@ G_{\text{rand}}
 1-G_{\text{rand}}+\varepsilon
 }
 \right]_{[0,1]}.
-$$
+```
 
 ### Paso 5
 Calcular masa confiable:
 
-$$
+```math
 m_k^{(r)} =
 \frac{\sum_i r_i \mathbf 1[y_i=k]}
 {\sum_i r_i}.
-$$
+```
 
 ### Paso 6
 Proyectar $m^{(r)}$ hacia $\Pi^{*}$ y obtener:
 
-$$
+```math
 S_{\text{size}} = 1-\min_{q\in\Pi^{*}}\mathrm{JS}(m^{(r)}\|q).
-$$
+```
 
 ### Paso 7
 Fusionar:
 
-$$
+```math
 \boxed{
 \mathcal T_{\text{RTM-H}}
 =
 \frac{2S_{\text{struct}}S_{\text{size}}}
 {S_{\text{struct}}+S_{\text{size}}+\varepsilon}
 }
-$$
+```
 
 ---
 
@@ -855,8 +857,8 @@ La idea más fuerte para tu tesis es reinterpretar la “transferibilidad” no 
 
 Esa es precisamente la parte novedosa: pasar de “¿las clases parecen clusters?” a
 
-$$
+```math
 \text{“¿las clases inducen una estructura confiable y utilizable bajo restricciones generales de tamaño?”}
-$$
+```
 
 y medirlo formalmente con una métrica implementable.
