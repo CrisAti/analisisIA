@@ -25,18 +25,9 @@ tal que valores altos indiquen que:
 1. las etiquetas del dataset capturan una estructura agrupable real;
 2. esa estructura es confiable tanto **globalmente** como **localmente**;
 3. dicha estructura es **compatible** con una región factible de tamaños $\Pi^{*}$, que puede tomar formas como:
-   - cotas por cluster:
-     ```math
-     n_k\in [L_k,U_k],
-     ```
-   - proporciones objetivo no uniformes:
-     ```math
-     \pi^{*}=(\pi_1^{*},\dots,\pi_K^{*}),\qquad \sum_k \pi_k^{*}=1,
-     ```
-   - una región factible general:
-     ```math
-     \Pi^{*}\subset \Delta^{K-1}.
-     ```
+   - cotas por cluster: $n_k \in [L_k, U_k]$,
+   - proporciones objetivo no uniformes: $`\pi^{*} = (\pi_1^{*}, \dots, \pi_K^{*}), \qquad \sum_k \pi_k^{*} = 1`$,
+   - una región factible general: $\Pi^{*} \subset \Delta^{K-1}$.
 
 Aquí $\Delta^{K-1}$ es el simplex de probabilidad.
 
@@ -260,11 +251,7 @@ donde $s_{ab}$ es una escala auto-calibrada, por ejemplo la desviación estánda
 
 ## 6.3. Score estructural global
 
-Agregamos por pares de clases:
-
-```math
-G_r = \frac{2}{K(K-1)} \sum_{a<b} \psi_{ab}.
-```
+Agregamos por pares de clases: $G_r = \frac{2}{K(K-1)} \sum_{a<b} \psi_{ab}$.`
 
 Esto mantiene el espíritu de A3: el score global depende de la calidad media por pares, no del mero conteo de clases.
 
@@ -792,20 +779,7 @@ r_i = \frac{2u_i v_i}{u_i+v_i+\varepsilon}.
 ```
 
 ### Paso 4
-Calcular el score estructural ajustado:
-
-```math
-S_{\text{struct}} =
-\left[
-\frac{
-\frac{2}{K(K-1)}\sum_{a<b}\psi_{ab}
--
-G_{\text{rand}}
-}{
-1-G_{\text{rand}}+\varepsilon
-}
-\right]_{[0,1]}.
-```
+Calcular el score estructural ajustado: $S_{\text{struct}} = \Big[\frac{\frac{2}{K(K-1)}\sum_{a<b}\psi_{ab} - G_{\text{rand}}}{1-G_{\text{rand}}+\varepsilon}\Big]_{[0,1]}$.
 
 ### Paso 5
 Calcular masa confiable:
